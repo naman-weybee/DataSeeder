@@ -22,11 +22,15 @@ namespace DataSeeder.Data
                 foreach (DataColumn column in table.Columns)
                     bulk.ColumnMappings.Add(column.ColumnName, column.ColumnName);
 
+                Console.WriteLine($"Started Adding Data for Table: {destinationTable}");
+
                 bulk.WriteToServer(table);
+
+                Console.WriteLine($"Data Added Successfully for Table: {destinationTable}");
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex);
+                Console.WriteLine($"DB ERROR: {ex}");
             }
         }
     }

@@ -1,5 +1,4 @@
 ﻿using Bogus;
-using Bogus.DataSets;
 using DataSeeder.Entities;
 using DataSeeder.Enum;
 using System.Data;
@@ -67,65 +66,67 @@ namespace DataSeeder
         public static List<Country> GenerateCountries(int dataCount)
         {
             var countries = new List<Country>();
-
             for (int i = 0; i < dataCount; i++)
             {
+                var country = Faker.Address.Country();
+                if (countries.Any(x => x.Name == country))
+                {
+                    dataCount++;
+                    continue;
+                }
+
                 countries.Add(new Country
                 {
                     Id = Guid.NewGuid(),
-                    Name = Faker.Address.Country(),
+                    Name = country,
                 });
             }
 
             return countries;
         }
 
-        public static List<State> GenerateStates(int dataCount)
+        public static List<State> GenerateStates(int dataCount, List<Country> countries)
         {
             var states = new List<State>();
+            var activeCountries = countries?.Where(c => !c.IsDeleted)?.Select(c => c.Id)?.ToList()!;
 
             for (int i = 0; i < dataCount; i++)
             {
+                var state = Faker.Address.State();
+                if (states.Any(x => x.Name == state))
+                    continue;
+
                 states.Add(new State
                 {
                     Id = Guid.NewGuid(),
-                    Name = Faker.Address.State(),
+                    Name = state,
+                    CountryId = activeCountries[random.Next(activeCountries.Count)]
                 });
             }
 
             return states;
         }
 
-        public static List<City> GenerateCities(int dataCount)
+        public static List<City> GenerateCities(int dataCount, List<State> states)
         {
             var cities = new List<City>();
+            var uniqueStates = states?.Where(c => !c.IsDeleted)?.Select(c => c.Id)?.ToList()!;
 
             for (int i = 0; i < dataCount; i++)
             {
+                var city = Faker.Address.State();
+                if (cities.Any(x => x.Name == city))
+                    continue;
+
                 cities.Add(new City
                 {
                     Id = Guid.NewGuid(),
-                    Name = Faker.Address.City(),
+                    Name = city,
+                    StateId = uniqueStates[random.Next(uniqueStates.Count)]
                 });
             }
 
             return cities;
-        }
-
-        public static List<Role> GenerateRoles(int dataCount)
-        {
-            var roles = new List<Role>();
-
-            for (int i = 0; i < dataCount; i++)
-            {
-                roles.Add(new Role
-                {
-                    Id = Guid.NewGuid(),
-                    Name = Faker.Name.JobTitle(),
-                });
-            }
-
-            return roles;
         }
 
         public static List<Role> GenerateRoles()
@@ -169,10 +170,12 @@ namespace DataSeeder
         public static List<RolePermission> GenerateRolePermissions(int dataCount, List<Role> roles)
         {
             var items = new List<RolePermission>();
+            var usedPairs = new HashSet<(Guid RoleId, eRoleEntity RoleEntityId)>();
 
             var adminRole = roles.FirstOrDefault(r => r.Name == "Admin" && !r.IsDeleted);
             if (adminRole != null)
             {
+                var adminPair = (adminRole.Id, eRoleEntity.Full);
                 items.Add(new RolePermission
                 {
                     RoleId = adminRole.Id,
@@ -182,24 +185,48 @@ namespace DataSeeder
                     HasDeletePermission = true,
                     HasFullPermission = true
                 });
+
+                usedPairs.Add(adminPair);
             }
 
-            var roleIds = roles?.Where(c => !c.IsDeleted && c.Id != adminRole!.Id)?.Select(c => c.Id)?.ToList()!;
+            var roleIds = roles
+                .Where(r => !r.IsDeleted && (adminRole == null || r.Id != adminRole.Id))
+                .Select(r => r.Id)
+                .ToList();
 
-            for (int i = 0; i < dataCount; i++)
+            var possibleEntities = System.Enum.GetValues<eRoleEntity>().Cast<eRoleEntity>().ToList();
+            var maxPossible = (roleIds.Count * possibleEntities.Count) + (adminRole != null ? 1 : 0);
+
+            if (items.Count + dataCount > maxPossible)
+                Console.WriteLine($"Cannot generate {dataCount} unique RolePermissions — max possible is {maxPossible}.");
+
+            var random = new Random();
+
+            while (items.Count < dataCount + (adminRole != null ? 1 : 0) && usedPairs.Count < maxPossible)
             {
-                items.Add(new RolePermission
-                {
-                    RoleId = roleIds[random.Next(roleIds.Count)],
-                    RoleEntityId = Faker.PickRandom<eRoleEntity>(),
-                    HasViewPermission = Faker.Random.Bool(0.8f),
-                    HasCreateOrUpdatePermission = Faker.Random.Bool(0.5f),
-                    HasDeletePermission = Faker.Random.Bool(0.3f),
-                    HasFullPermission = false
-                });
+                var roleId = roleIds[random.Next(roleIds.Count)];
+                var roleEntityId = possibleEntities[random.Next(possibleEntities.Count)];
 
-                var last = items[^1];
-                last.HasFullPermission = last.HasViewPermission && last.HasCreateOrUpdatePermission && last.HasDeletePermission;
+                var pair = (roleId, roleEntityId);
+                if (usedPairs.Contains(pair))
+                    continue;
+
+                var hasView = Faker.Random.Bool(0.8f);
+                var hasCreateOrUpdate = Faker.Random.Bool(0.5f);
+                var hasDelete = Faker.Random.Bool(0.3f);
+
+                var newItem = new RolePermission
+                {
+                    RoleId = roleId,
+                    RoleEntityId = roleEntityId,
+                    HasViewPermission = hasView,
+                    HasCreateOrUpdatePermission = hasCreateOrUpdate,
+                    HasDeletePermission = hasDelete,
+                    HasFullPermission = hasView && hasCreateOrUpdate && hasDelete
+                };
+
+                items.Add(newItem);
+                usedPairs.Add(pair);
             }
 
             return items;
@@ -246,7 +273,7 @@ namespace DataSeeder
             return users;
         }
 
-        public static List<Addresses> GenerateAddresses(int AddressesCount, List<User> users, List<Country> countries, List<Country> states, List<Country> cities)
+        public static List<Addresses> GenerateAddresses(int AddressesCount, List<User> users, List<Country> countries, List<State> states, List<City> cities)
         {
             var Addresses = new List<Addresses>();
             var activeUsers = users?.Where(c => !c.IsDeleted)?.Select(c => c.Id)?.ToList()!;

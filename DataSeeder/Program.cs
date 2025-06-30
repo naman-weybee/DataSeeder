@@ -1,4 +1,5 @@
-﻿using DataSeeder;
+﻿using Bogus;
+using DataSeeder;
 using DataSeeder.Data;
 using DataSeeder.Helpers;
 
@@ -42,11 +43,11 @@ namespace DummyDataGenerator
                 var countryTable = DataHelper.ToDataTable(countries);
                 ApplicationDbContext.BulkInsert(countryTable, "Countries");
 
-                var states = Generators.GenerateCountries(Constants.StateCount);
+                var states = Generators.GenerateStates(Constants.StateCount, countries);
                 var stateTable = DataHelper.ToDataTable(states);
                 ApplicationDbContext.BulkInsert(stateTable, "States");
 
-                var cities = Generators.GenerateCountries(Constants.CityCount);
+                var cities = Generators.GenerateCities(Constants.CityCount, states);
                 var cityTable = DataHelper.ToDataTable(cities);
                 ApplicationDbContext.BulkInsert(cityTable, "Cities");
 

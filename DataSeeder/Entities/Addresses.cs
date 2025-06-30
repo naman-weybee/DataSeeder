@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace DataSeeder.Entities
 {
-    public class Address : Base
+    public class Addresses : Base
     {
         public Guid Id { get; set; }
 

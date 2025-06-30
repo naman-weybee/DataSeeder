@@ -1,4 +1,5 @@
 ﻿using Bogus;
+using Bogus.DataSets;
 using DataSeeder.Entities;
 using DataSeeder.Enum;
 using System.Data;
@@ -152,7 +153,7 @@ namespace DataSeeder
                 new() { Id = eRoleEntity.RolePermission, Name = "RolePermission" },
                 new() { Id = eRoleEntity.RoleEntity, Name = "RoleEntity" },
                 new() { Id = eRoleEntity.Gender, Name = "Gender" },
-                new() { Id = eRoleEntity.Address, Name = "Address" },
+                new() { Id = eRoleEntity.Address, Name = "Addresses" },
                 new() { Id = eRoleEntity.Category, Name = "Category" },
                 new() { Id = eRoleEntity.Product, Name = "Product" },
                 new() { Id = eRoleEntity.User, Name = "User" },
@@ -183,7 +184,7 @@ namespace DataSeeder
                 });
             }
 
-            var roleIds = roles?.Where(c => !c.IsDeleted)?.Select(c => c.Id)?.ToList()!;
+            var roleIds = roles?.Where(c => !c.IsDeleted && c.Id != adminRole!.Id)?.Select(c => c.Id)?.ToList()!;
 
             for (int i = 0; i < dataCount; i++)
             {
@@ -245,17 +246,17 @@ namespace DataSeeder
             return users;
         }
 
-        public static List<Address> GenerateAddress(int addressCount, List<User> users, List<Country> countries, List<Country> states, List<Country> cities)
+        public static List<Addresses> GenerateAddresses(int AddressesCount, List<User> users, List<Country> countries, List<Country> states, List<Country> cities)
         {
-            var address = new List<Address>();
+            var Addresses = new List<Addresses>();
             var activeUsers = users?.Where(c => !c.IsDeleted)?.Select(c => c.Id)?.ToList()!;
             var activeCountries = countries?.Where(c => !c.IsDeleted)?.Select(c => c.Id)?.ToList()!;
             var activeStates = states?.Where(c => !c.IsDeleted)?.Select(c => c.Id)?.ToList()!;
             var activeCities = cities?.Where(c => !c.IsDeleted)?.Select(c => c.Id)?.ToList()!;
 
-            for (int i = 0; i < addressCount; i++)
+            for (int i = 0; i < AddressesCount; i++)
             {
-                address.Add(new Address()
+                Addresses.Add(new Addresses()
                 {
                     Id = Guid.NewGuid(),
                     FirstName = Faker.Name.FirstName(),
@@ -271,7 +272,7 @@ namespace DataSeeder
                 });
             }
 
-            return address;
+            return Addresses;
         }
     }
 }

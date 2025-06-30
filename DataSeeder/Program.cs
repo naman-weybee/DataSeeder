@@ -50,7 +50,7 @@ namespace DummyDataGenerator
                 var cityTable = DataHelper.ToDataTable(cities);
                 ApplicationDbContext.BulkInsert(cityTable, "Cities");
 
-                var addresses = Generators.GenerateAddress(Constants.AddressCount, users, countries, states, cities);
+                var addresses = Generators.GenerateAddresses(Constants.AddressCount, users, countries, states, cities);
                 var addressTable = DataHelper.ToDataTable(addresses);
                 ApplicationDbContext.BulkInsert(addressTable, "Address");
             }

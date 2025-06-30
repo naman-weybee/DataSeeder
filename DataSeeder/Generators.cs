@@ -1,6 +1,7 @@
 ﻿using Bogus;
 using DataSeeder.Entities;
 using DataSeeder.Enum;
+using DataSeeder.Helpers;
 using System.Data;
 
 namespace DataSeeder
@@ -250,14 +251,18 @@ namespace DataSeeder
 
             for (int i = 0; i < dataCount; i++)
             {
+                var email = Faker.Internet.Email();
+                if (users.Any(x => x.Email == email))
+                    continue;
+
                 var isEmailVerified = Faker.Random.Bool(0.9f);
                 users.Add(new User
                 {
                     Id = Guid.NewGuid(),
                     FirstName = Faker.Name.FirstName(),
                     LastName = Faker.Name.LastName(),
-                    Password = Faker.Internet.Password(8, true),
-                    Email = Faker.Internet.Email(),
+                    Password = DataHelper.ComputeMD5Hash(Faker.Internet.Password(8, true)),
+                    Email = email,
                     PhoneNumber = Faker.Phone.PhoneNumber(),
                     RoleId = roleIds[random.Next(roleIds.Count)],
                     DateOfBirth = Faker.Date.Past(30, DateTime.Now.AddYears(-18)),

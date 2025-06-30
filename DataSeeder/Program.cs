@@ -1,5 +1,4 @@
-﻿using Bogus;
-using DataSeeder;
+﻿using DataSeeder;
 using DataSeeder.Data;
 using DataSeeder.Helpers;
 

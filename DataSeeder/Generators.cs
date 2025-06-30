@@ -39,20 +39,20 @@ namespace DataSeeder
             return categories;
         }
 
-        public static List<Product> GenerateProducts(int dataCount, List<Category> products)
+        public static List<Product> GenerateProducts(int dataCount, List<Category> categories)
         {
             var items = new List<Product>();
-            var categoryIds = products?.Where(c => !c.IsDeleted)?.Select(c => c.Id)?.ToList()!;
+            var activeCategories = categories?.Where(c => !c.IsDeleted)?.Select(c => c.Id)?.ToList()!;
 
             for (int i = 0; i < dataCount; i++)
             {
                 items.Add(new Product
                 {
                     Id = Guid.NewGuid(),
-                    CategoryId = categoryIds[random.Next(categoryIds.Count)],
+                    CategoryId = activeCategories[random.Next(activeCategories.Count)],
                     Name = Faker.Commerce.ProductName(),
                     Description = Faker.Commerce.ProductDescription(),
-                    Price = Faker.Random.Double(10, 5000),
+                    Price = Faker.Random.Double(1000, 500000),
                     Currency = "USD",
                     Stock = Faker.Random.Int(0, 1000),
                     SKU = Faker.Random.AlphaNumeric(8).ToUpper(),
@@ -212,6 +212,66 @@ namespace DataSeeder
                 new() { Id = Guid.NewGuid(), Name = "Female" },
                 new() { Id = Guid.NewGuid(), Name = "Other" }
             ];
+        }
+
+        public static List<User> GenerateUsers(int dataCount, List<Role> roles, List<Gender> genders)
+        {
+            var users = new List<User>();
+            var roleIds = roles?.Where(c => !c.IsDeleted)?.Select(c => c.Id)?.ToList()!;
+            var genderIds = genders?.Select(c => c.Id)?.ToList()!;
+
+            for (int i = 0; i < dataCount; i++)
+            {
+                var isEmailVerified = Faker.Random.Bool(0.9f);
+                users.Add(new User
+                {
+                    Id = Guid.NewGuid(),
+                    FirstName = Faker.Name.FirstName(),
+                    LastName = Faker.Name.LastName(),
+                    Password = Faker.Internet.Password(8, true),
+                    Email = Faker.Internet.Email(),
+                    PhoneNumber = Faker.Phone.PhoneNumber(),
+                    RoleId = roleIds[random.Next(roleIds.Count)],
+                    DateOfBirth = Faker.Date.Past(30, DateTime.Now.AddYears(-18)),
+                    GenderId = genderIds[random.Next(genderIds.Count)],
+                    IsActive = Faker.Random.Bool(0.9f),
+                    IsEmailVerified = isEmailVerified,
+                    EmailVerificationToken = isEmailVerified ? null : Faker.Random.AlphaNumeric(20),
+                    IsPhoneNumberVerified = Faker.Random.Bool(0.8f),
+                    IsSubscribedToNotifications = Faker.Random.Bool(0.5f)
+                });
+            }
+
+            return users;
+        }
+
+        public static List<Address> GenerateAddress(int addressCount, List<User> users, List<Country> countries, List<Country> states, List<Country> cities)
+        {
+            var address = new List<Address>();
+            var activeUsers = users?.Where(c => !c.IsDeleted)?.Select(c => c.Id)?.ToList()!;
+            var activeCountries = countries?.Where(c => !c.IsDeleted)?.Select(c => c.Id)?.ToList()!;
+            var activeStates = states?.Where(c => !c.IsDeleted)?.Select(c => c.Id)?.ToList()!;
+            var activeCities = cities?.Where(c => !c.IsDeleted)?.Select(c => c.Id)?.ToList()!;
+
+            for (int i = 0; i < addressCount; i++)
+            {
+                address.Add(new Address()
+                {
+                    Id = Guid.NewGuid(),
+                    FirstName = Faker.Name.FirstName(),
+                    LastName = Faker.Name.LastName(),
+                    UserId = activeUsers[random.Next(activeUsers.Count)],
+                    CountryId = activeCountries[random.Next(activeCountries.Count)],
+                    StateId = activeStates[random.Next(activeStates.Count)],
+                    CityId = activeCities[random.Next(activeCities.Count)],
+                    PostalCode = Faker.Address.ZipCode(),
+                    AdderessType = Faker.PickRandom<eAddressType>(),
+                    AddressLine = Faker.Address.StreetAddress(),
+                    PhoneNumber = Faker.Phone.PhoneNumber()
+                });
+            }
+
+            return address;
         }
     }
 }

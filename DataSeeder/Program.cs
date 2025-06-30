@@ -34,6 +34,10 @@ namespace DummyDataGenerator
                 var genderTable = DataHelper.ToDataTable(genders);
                 ApplicationDbContext.BulkInsert(genderTable, "Gender");
 
+                var users = Generators.GenerateUsers(Constants.UserCount, roles, genders);
+                var userTable = DataHelper.ToDataTable(users);
+                ApplicationDbContext.BulkInsert(userTable, "Users");
+
                 var countries = Generators.GenerateCountries(Constants.CountryCount);
                 var countryTable = DataHelper.ToDataTable(countries);
                 ApplicationDbContext.BulkInsert(countryTable, "Countries");
@@ -45,6 +49,10 @@ namespace DummyDataGenerator
                 var cities = Generators.GenerateCountries(Constants.CityCount);
                 var cityTable = DataHelper.ToDataTable(cities);
                 ApplicationDbContext.BulkInsert(cityTable, "Cities");
+
+                var addresses = Generators.GenerateAddress(Constants.AddressCount, users, countries, states, cities);
+                var addressTable = DataHelper.ToDataTable(addresses);
+                ApplicationDbContext.BulkInsert(addressTable, "Address");
             }
             catch (Exception ex)
             {

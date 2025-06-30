@@ -27,9 +27,9 @@ namespace DataSeeder.Entities
 
         public bool IsActive { get; set; } = true;
 
-        public string? EmailVerificationToken { get; set; }
-
         public bool IsEmailVerified { get; set; }
+
+        public string? EmailVerificationToken { get; set; }
 
         public bool IsPhoneNumberVerified { get; set; }
 

@@ -12,7 +12,7 @@ namespace DataSeeder
         public static Faker Faker { get; set; } = new();
         public static Random random { get; set; } = new();
 
-        private static readonly string[] items = ["CreditCard", "PayPal", "BankTransfer"];
+        private static readonly string[] paymentMethods = ["CreditCard", "PayPal", "BankTransfer"];
 
         public static List<Category> GenerateCategories(int dataCount)
         {
@@ -355,6 +355,7 @@ namespace DataSeeder
             var orderItems = new List<OrderItem>();
             var ordersToStore = new List<Order>();
             var cartItemsToRemove = new List<CartItems>();
+            var actualCartItems = new List<CartItems>();
             var orderItemPairs = new HashSet<(Guid OrderId, Guid CartItemId)>();
             var activeOrders = orders?.Where(o => o != Guid.Empty)?.ToList()!;
             var activeCartItems = cartItems?.Where(ci => !ci.IsDeleted)?.ToList()!;
@@ -367,14 +368,16 @@ namespace DataSeeder
                 orderItemCount = activeOrders.Count * activeCartItems.Count;
             }
 
-            var random = new Random();
             for (int i = 0; i < orderItemCount; i++)
             {
                 var orderId = activeOrders[random.Next(activeOrders.Count)];
                 var cartItem = activeCartItems[random.Next(activeCartItems.Count)];
 
                 if (orderItemPairs.Contains((orderId, cartItem.Id)))
+                {
+                    i--;
                     continue;
+                }
 
                 orderItemPairs.Add((orderId, cartItem.Id));
 
@@ -393,24 +396,26 @@ namespace DataSeeder
                         OrderCanceledDate = status == eOrderStatus.Canceled ? DateTime.UtcNow : null,
                         BillingAddressId = Faker.PickRandom(billingAddresses).Id,
                         ShippingAddressId = Faker.PickRandom(shippingAddresses).Id,
-                        PaymentMethod = Faker.PickRandom(items)
+                        PaymentMethod = Faker.PickRandom(paymentMethods)
                     };
 
                     ordersToStore.Add(orderToStore);
+                }
 
-                    foreach (var activeCartItem in activeCartItems)
-                    {
-                        if (orderItems.Any(x => x.OrderId == orderToStore.Id && x.ProductId == activeCartItem.ProductId && cartItem.UserId == orderToStore.UserId))
-                        {
-                            activeCartItem.DeletedDate = DateTime.UtcNow;
-                            activeCartItem.IsDeleted = true;
-                        }
+                var product = products.First(p => p.Id == cartItem.ProductId);
+                if (product.Stock < cartItem.Quantity)
+                {
+                    Console.WriteLine($"Insufficient stock for Product: {product.Name}.");
+                    continue;
+                }
 
-                        if (cartItemsToRemove.Contains(activeCartItem))
-                            continue;
+                product.Stock -= cartItem.Quantity;
 
-                        cartItemsToRemove.Add(activeCartItem);
-                    }
+                if (!cartItemsToRemove.Contains(cartItem))
+                {
+                    cartItem.DeletedDate = DateTime.UtcNow;
+                    cartItem.IsDeleted = true;
+                    cartItemsToRemove.Add(cartItem);
                 }
 
                 var orderItem = new OrderItem
@@ -422,15 +427,13 @@ namespace DataSeeder
                     UnitPrice = cartItem.UnitPrice
                 };
 
-                var product = products.First(p => p.Id == orderItem.ProductId);
-                if (product.Stock < orderItem.Quantity)
+                if (orderItems.Any(x =>
+                        x.OrderId == orderItem.OrderId &&
+                        x.ProductId == orderItem.ProductId))
                 {
-                    Console.WriteLine($"Insufficient stock for Product: {product.Name}.");
+                    i--;
                     continue;
                 }
-
-                if (orderItems.Contains(orderItem))
-                    continue;
 
                 orderItems.Add(orderItem);
             }
@@ -438,7 +441,23 @@ namespace DataSeeder
             var orderTable = DataHelper.ToDataTable(ordersToStore);
             ApplicationDbContext.BulkInsert(orderTable, "Orders");
 
-            var cartItemTable = DataHelper.ToDataTable(cartItemsToRemove);
+            foreach (var cartItemsoRemove in cartItemsToRemove)
+            {
+                if (actualCartItems.Any(x => x.Id == cartItemsoRemove.Id))
+                    continue;
+
+                actualCartItems.Add(cartItemsoRemove);
+            }
+
+            foreach (var activeCartItem in activeCartItems)
+            {
+                if (actualCartItems.Any(x => x.Id == activeCartItem.Id))
+                    continue;
+
+                actualCartItems.Add(activeCartItem);
+            }
+
+            var cartItemTable = DataHelper.ToDataTable(actualCartItems);
             ApplicationDbContext.BulkInsert(cartItemTable, "CartItems");
 
             return orderItems;

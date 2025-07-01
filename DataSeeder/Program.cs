@@ -55,10 +55,8 @@ namespace DummyDataGenerator
                 ApplicationDbContext.BulkInsert(addressTable, "Address");
 
                 var cartItems = Generators.GenerateCartItems(Constants.CartItemCount, users, products);
-                var cartItemTable = DataHelper.ToDataTable(cartItems);
-                ApplicationDbContext.BulkInsert(cartItemTable, "CartItems");
-
                 var orderIds = Generators.GenerateOrderIds(Constants.OrderCount);
+
                 var orderItems = Generators.GenerateOrderItems(Constants.OrderItemCount, orderIds, addresses, cartItems, products);
                 var orderItemTable = DataHelper.ToDataTable(orderItems);
                 ApplicationDbContext.BulkInsert(orderItemTable, "OrderItems");

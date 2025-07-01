@@ -326,7 +326,7 @@ namespace DataSeeder
 
                 userProductPairs.Add((userId, productId));
 
-                var quantity = Faker.Random.Int(1, 2);
+                var quantity = Faker.Random.Int(1, 10);
                 var productPrice = products!.Where(x => x.Id == productId).Select(x => x.Price).First();
                 cartItems.Add(new CartItems
                 {
@@ -354,6 +354,7 @@ namespace DataSeeder
         {
             var orderItems = new List<OrderItem>();
             var ordersToStore = new List<Order>();
+            var cartItemsToRemove = new List<CartItems>();
             var orderItemPairs = new HashSet<(Guid OrderId, Guid CartItemId)>();
             var activeOrders = orders?.Where(o => o != Guid.Empty)?.ToList()!;
             var activeCartItems = cartItems?.Where(ci => !ci.IsDeleted)?.ToList()!;
@@ -380,7 +381,7 @@ namespace DataSeeder
                 if (!ordersToStore.Any(o => o.Id == orderId))
                 {
                     var status = Faker.PickRandom<eOrderStatus>();
-                    ordersToStore.Add(new Order
+                    var orderToStore = new Order
                     {
                         Id = orderId,
                         UserId = cartItem.UserId,
@@ -393,7 +394,23 @@ namespace DataSeeder
                         BillingAddressId = Faker.PickRandom(billingAddresses).Id,
                         ShippingAddressId = Faker.PickRandom(shippingAddresses).Id,
                         PaymentMethod = Faker.PickRandom(items)
-                    });
+                    };
+
+                    ordersToStore.Add(orderToStore);
+
+                    foreach (var activeCartItem in activeCartItems)
+                    {
+                        if (orderItems.Any(x => x.OrderId == orderToStore.Id && x.ProductId == activeCartItem.ProductId && cartItem.UserId == orderToStore.UserId))
+                        {
+                            activeCartItem.DeletedDate = DateTime.UtcNow;
+                            activeCartItem.IsDeleted = true;
+                        }
+
+                        if (cartItemsToRemove.Contains(activeCartItem))
+                            continue;
+
+                        cartItemsToRemove.Add(activeCartItem);
+                    }
                 }
 
                 var orderItem = new OrderItem
@@ -408,15 +425,21 @@ namespace DataSeeder
                 var product = products.First(p => p.Id == orderItem.ProductId);
                 if (product.Stock < orderItem.Quantity)
                 {
-                    Console.WriteLine($"Insufficient stock for product {product.Name}.");
+                    Console.WriteLine($"Insufficient stock for Product: {product.Name}.");
                     continue;
                 }
+
+                if (orderItems.Contains(orderItem))
+                    continue;
 
                 orderItems.Add(orderItem);
             }
 
             var orderTable = DataHelper.ToDataTable(ordersToStore);
             ApplicationDbContext.BulkInsert(orderTable, "Orders");
+
+            var cartItemTable = DataHelper.ToDataTable(cartItemsToRemove);
+            ApplicationDbContext.BulkInsert(cartItemTable, "CartItems");
 
             return orderItems;
         }

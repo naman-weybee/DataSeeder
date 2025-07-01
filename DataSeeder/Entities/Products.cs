@@ -2,7 +2,7 @@
 
 namespace DataSeeder.Entities
 {
-    public class Product : Base
+    public class Products : Base
     {
         public Guid Id { get; set; }
 

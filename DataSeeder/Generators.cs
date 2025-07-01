@@ -1,4 +1,5 @@
 ﻿using Bogus;
+using DataSeeder.Data;
 using DataSeeder.Entities;
 using DataSeeder.Enum;
 using DataSeeder.Helpers;
@@ -10,6 +11,8 @@ namespace DataSeeder
     {
         public static Faker Faker { get; set; } = new();
         public static Random random { get; set; } = new();
+
+        private static readonly string[] items = ["CreditCard", "PayPal", "BankTransfer"];
 
         public static List<Category> GenerateCategories(int dataCount)
         {
@@ -40,20 +43,20 @@ namespace DataSeeder
             return categories;
         }
 
-        public static List<Product> GenerateProducts(int dataCount, List<Category> categories)
+        public static List<Products> GenerateProducts(int dataCount, List<Category> categories)
         {
-            var items = new List<Product>();
+            var items = new List<Products>();
             var activeCategories = categories?.Where(c => !c.IsDeleted)?.Select(c => c.Id)?.ToList()!;
 
             for (int i = 0; i < dataCount; i++)
             {
-                items.Add(new Product
+                items.Add(new Products
                 {
                     Id = Guid.NewGuid(),
                     CategoryId = activeCategories[random.Next(activeCategories.Count)],
                     Name = Faker.Commerce.ProductName(),
                     Description = Faker.Commerce.ProductDescription(),
-                    Price = Faker.Random.Double(1000, 500000),
+                    Price = Faker.Random.Double(10, 5000),
                     Currency = "USD",
                     Stock = Faker.Random.Int(0, 1000),
                     SKU = Faker.Random.AlphaNumeric(8).ToUpper(),
@@ -201,8 +204,6 @@ namespace DataSeeder
             if (items.Count + dataCount > maxPossible)
                 Console.WriteLine($"Cannot generate {dataCount} unique RolePermissions — max possible is {maxPossible}.");
 
-            var random = new Random();
-
             while (items.Count < dataCount + (adminRole != null ? 1 : 0) && usedPairs.Count < maxPossible)
             {
                 var roleId = roleIds[random.Next(roleIds.Count)];
@@ -305,6 +306,119 @@ namespace DataSeeder
             }
 
             return Addresses;
+        }
+
+        public static List<CartItems> GenerateCartItems(int cartItemCount, List<User> users, List<Products> products)
+        {
+            var cartItems = new List<CartItems>();
+            var userProductPairs = new HashSet<(Guid UserId, Guid ProductId)>();
+
+            var activeUsers = users?.Where(c => !c.IsDeleted)?.Select(c => c.Id)?.ToList()!;
+            var activeProducts = products?.Where(c => !c.IsDeleted)?.Select(c => c.Id)?.ToList()!;
+
+            for (int i = 0; i < cartItemCount; i++)
+            {
+                var userId = activeUsers[random.Next(activeUsers.Count)];
+                var productId = activeProducts[random.Next(activeProducts.Count)];
+
+                if (userProductPairs.Contains((userId, productId)))
+                    continue;
+
+                userProductPairs.Add((userId, productId));
+
+                var quantity = Faker.Random.Int(1, 2);
+                var productPrice = products!.Where(x => x.Id == productId).Select(x => x.Price).First();
+                cartItems.Add(new CartItems
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = userId,
+                    ProductId = productId,
+                    Quantity = quantity,
+                    UnitPrice = productPrice * quantity
+                });
+            }
+
+            return cartItems;
+        }
+
+        public static List<Guid> GenerateOrderIds(int orderCount)
+        {
+            var orders = new List<Guid>();
+            for (int i = 0; i < orderCount; i++)
+                orders.Add(Guid.NewGuid());
+
+            return orders;
+        }
+
+        public static List<OrderItem> GenerateOrderItems(int orderItemCount, List<Guid> orders, List<Addresses> addresses, List<CartItems> cartItems, List<Products> products)
+        {
+            var orderItems = new List<OrderItem>();
+            var ordersToStore = new List<Order>();
+            var orderItemPairs = new HashSet<(Guid OrderId, Guid CartItemId)>();
+            var activeOrders = orders?.Where(o => o != Guid.Empty)?.ToList()!;
+            var activeCartItems = cartItems?.Where(ci => !ci.IsDeleted)?.ToList()!;
+            var billingAddresses = addresses?.Where(a => !a.IsDeleted && a.AdderessType == eAddressType.Billing)?.ToList()!;
+            var shippingAddresses = addresses?.Where(a => !a.IsDeleted && a.AdderessType == eAddressType.Shipping)?.ToList()!;
+
+            if (orderItemCount > activeOrders.Count * activeCartItems.Count)
+            {
+                Console.WriteLine($"Cannot generate {orderItemCount} unique OrderItems — max possible is {activeOrders.Count * activeCartItems.Count}.");
+                orderItemCount = activeOrders.Count * activeCartItems.Count;
+            }
+
+            var random = new Random();
+            for (int i = 0; i < orderItemCount; i++)
+            {
+                var orderId = activeOrders[random.Next(activeOrders.Count)];
+                var cartItem = activeCartItems[random.Next(activeCartItems.Count)];
+
+                if (orderItemPairs.Contains((orderId, cartItem.Id)))
+                    continue;
+
+                orderItemPairs.Add((orderId, cartItem.Id));
+
+                if (!ordersToStore.Any(o => o.Id == orderId))
+                {
+                    var status = Faker.PickRandom<eOrderStatus>();
+                    ordersToStore.Add(new Order
+                    {
+                        Id = orderId,
+                        UserId = cartItem.UserId,
+                        TotalAmount = cartItem.UnitPrice * cartItem.Quantity,
+                        OrderStatus = status,
+                        OrderPlacedDate = status == eOrderStatus.Placed ? DateTime.UtcNow : null,
+                        OrderShippedDate = status == eOrderStatus.Shipped ? DateTime.UtcNow : null,
+                        OrderDeliveredDate = status == eOrderStatus.Delivered ? DateTime.UtcNow : null,
+                        OrderCanceledDate = status == eOrderStatus.Canceled ? DateTime.UtcNow : null,
+                        BillingAddressId = Faker.PickRandom(billingAddresses).Id,
+                        ShippingAddressId = Faker.PickRandom(shippingAddresses).Id,
+                        PaymentMethod = Faker.PickRandom(items)
+                    });
+                }
+
+                var orderItem = new OrderItem
+                {
+                    Id = Guid.NewGuid(),
+                    OrderId = orderId,
+                    ProductId = cartItem.ProductId,
+                    Quantity = cartItem.Quantity,
+                    UnitPrice = cartItem.UnitPrice
+                };
+
+                var product = products.First(p => p.Id == orderItem.ProductId);
+                if (product.Stock < orderItem.Quantity)
+                {
+                    Console.WriteLine($"Insufficient stock for product {product.Name}.");
+                    continue;
+                }
+
+                orderItems.Add(orderItem);
+            }
+
+            var orderTable = DataHelper.ToDataTable(ordersToStore);
+            ApplicationDbContext.BulkInsert(orderTable, "Orders");
+
+            return orderItems;
         }
     }
 }

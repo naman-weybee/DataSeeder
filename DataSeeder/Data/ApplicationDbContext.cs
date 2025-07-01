@@ -23,9 +23,7 @@ namespace DataSeeder.Data
                     bulk.ColumnMappings.Add(column.ColumnName, column.ColumnName);
 
                 Console.WriteLine($"Started Adding Data for Table: {destinationTable}");
-
                 bulk.WriteToServer(table);
-
                 Console.WriteLine($"Data Added Successfully for Table: {destinationTable}\n");
             }
             catch (Exception ex)

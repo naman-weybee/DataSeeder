@@ -10,5 +10,8 @@
         public static int RolePermissionCount { get; } = 1000;
         public static int UserCount { get; } = 10000;
         public static int AddressCount { get; } = 20000;
+        public static int CartItemCount { get; } = 10000;
+        public static int OrderItemCount { get; } = 10000;
+        public static int OrderCount { get; } = 1000;
     }
 }

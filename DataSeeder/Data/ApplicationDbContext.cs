@@ -26,7 +26,7 @@ namespace DataSeeder.Data
 
                 bulk.WriteToServer(table);
 
-                Console.WriteLine($"Data Added Successfully for Table: {destinationTable}");
+                Console.WriteLine($"Data Added Successfully for Table: {destinationTable}\n");
             }
             catch (Exception ex)
             {

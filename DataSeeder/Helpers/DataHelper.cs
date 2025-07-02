@@ -1,7 +1,5 @@
 ﻿using System.Data;
 using System.Reflection;
-using System.Security.Cryptography;
-using System.Text;
 
 namespace DataSeeder.Helpers
 {
@@ -25,22 +23,6 @@ namespace DataSeeder.Helpers
             }
 
             return table;
-        }
-
-        public static string ComputeMD5Hash(string input)
-        {
-            if (string.IsNullOrEmpty(input) || string.IsNullOrWhiteSpace(input))
-                throw new ArgumentNullException("Input for MD5 is required.");
-
-            var inputBytes = Encoding.UTF8.GetBytes(input);
-
-            var hashBytes = MD5.HashData(inputBytes);
-
-            var sb = new StringBuilder();
-            foreach (byte b in hashBytes)
-                sb.Append(b.ToString("x2"));
-
-            return sb.ToString();
         }
     }
 }

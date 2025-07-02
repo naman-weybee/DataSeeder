@@ -262,7 +262,7 @@ namespace DataSeeder
                     Id = Guid.NewGuid(),
                     FirstName = Faker.Name.FirstName(),
                     LastName = Faker.Name.LastName(),
-                    Password = DataHelper.ComputeMD5Hash(Faker.Internet.Password(8, true)),
+                    Password = "99fb7c0e0fd1601782e5e154a6d46c38",
                     Email = email,
                     PhoneNumber = Faker.Phone.PhoneNumber(),
                     RoleId = roleIds[random.Next(roleIds.Count)],
